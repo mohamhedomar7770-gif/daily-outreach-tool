@@ -16,7 +16,7 @@ import datetime
 import urllib.request
 import urllib.parse
 
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 META_ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN")  # اختياري
 
 MY_SERVICE_DESCRIPTION = os.environ.get(
@@ -47,9 +47,9 @@ def check_meta_ads(brand_name: str) -> str:
 
 
 def draft_message(brand_name: str, niche: str, notes: str, ads_status: str) -> str:
-    """يستخدم Claude API عشان يكتب رسالة outreach مخصصة."""
-    if not ANTHROPIC_API_KEY:
-        return "[محتاج ANTHROPIC_API_KEY عشان يتولد نص الرسالة]"
+    """يستخدم Gemini API (مجاني) عشان يكتب رسالة outreach مخصصة."""
+    if not GEMINI_API_KEY:
+        return "[محتاج GEMINI_API_KEY عشان يتولد نص الرسالة]"
 
     prompt = f"""اكتب رسالة outreach قصيرة (3-4 أسطر) بالعامية المصرية لبراند اسمه {brand_name}،
 مجاله: {niche}. ملاحظات عنه: {notes}. حالة إعلاناته: {ads_status}.
@@ -57,25 +57,19 @@ def draft_message(brand_name: str, niche: str, notes: str, ads_status: str) -> s
 الرسالة تكون ودودة، شخصية (تذكر حاجة عن البراند)، ومن غير مبالغة أو إلحاح، وتنتهي بسؤال بسيط يفتح حوار."""
 
     body = json.dumps(
-        {
-            "model": "claude-sonnet-4-6",
-            "max_tokens": 300,
-            "messages": [{"role": "user", "content": prompt}],
-        }
+        {"contents": [{"parts": [{"text": prompt}]}]}
     ).encode()
 
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    )
     req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-        },
+        url, data=body, headers={"Content-Type": "application/json"}
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read())
-    return data["content"][0]["text"].strip()
+    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
 def main():

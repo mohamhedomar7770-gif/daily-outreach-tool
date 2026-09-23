@@ -20,7 +20,7 @@ jobs:
 
       - name: Run generator
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
         run: python outreach_generator.py
 
