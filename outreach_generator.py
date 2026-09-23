@@ -138,7 +138,7 @@ def main():
         name, handle = str(item.get("brand_name", "")).strip(), str(item.get("handle_or_page", "")).strip()
         ig, tt = str(item.get("instagram_url", "")).strip(), str(item.get("tiktok_url", "")).strip()
         website = str(item.get("website_url", "")).strip()
-        dm_url = (f"https://ig.me/m/{handle.lstrip("@")}" if ig and handle else (tt or ig))
+        dm_url = f"https://ig.me/m/{handle.lstrip('@')}" if ig and handle else (tt or ig)
         item["website_url"], item["dm_url"] = website, dm_url
         key = norm(ig or tt or handle or name)
         if not name or not key or key in keys or not (ig or tt):
