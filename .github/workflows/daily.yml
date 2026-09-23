@@ -2,11 +2,16 @@ name: Daily Outreach Generator
 
 on:
   schedule:
-    - cron: "0 6 * * *"   # كل يوم الساعة 6 صباحًا UTC (8 صباحًا بتوقيت مصر)
-  workflow_dispatch:        # تشغيل يدوي من GitHub في أي وقت
+    - cron: "0 6 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+env:
+  DAILY_LIMIT: "60"
+  TARGET_MARKETS: "مصر,السعودية,الإمارات,الكويت,قطر,البحرين,عمان"
+  GEMINI_MODEL: "gemini-2.0-flash"
 
 jobs:
   generate:
@@ -18,16 +23,16 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run generator
+      - name: Discover brands and generate outreach
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
         run: python outreach_generator.py
 
-      - name: Commit results
+      - name: Commit results and discovery history
         run: |
           git config user.name "outreach-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add docs/results.json
-          git commit -m "تحديث نتائج $(date +%F)" || echo "لا يوجد تغيير"
+          git add docs/results.json data/brand_history.csv
+          git commit -m "اكتشاف وتحديث رسائل $(date +%F)" || echo "لا يوجد تغيير"
           git push
