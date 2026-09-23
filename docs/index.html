@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>رسايل Outreach اليومية</title>
+<style>
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background:#f6f7f9; margin:0; padding:20px; }
+  h1 { text-align:center; }
+  #meta { text-align:center; color:#666; margin-bottom:20px; }
+  .card { background:#fff; border-radius:10px; padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .card h3 { margin:0 0 4px; }
+  .status { display:inline-block; font-size:12px; color:#555; background:#eef1f5; padding:3px 8px; border-radius:6px; margin-bottom:8px; }
+  .msg { white-space:pre-wrap; line-height:1.6; margin:8px 0; }
+  button { background:#2563eb; color:#fff; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; }
+  button:hover { background:#1d4ed8; }
+</style>
+</head>
+<body>
+<h1>رسايل Outreach جاهزة</h1>
+<div id="meta">جاري التحميل...</div>
+<div id="list"></div>
+
+<script>
+fetch('results.json?_=' + Date.now())
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('meta').textContent =
+      `آخر تحديث: ${new Date(data.generated_at).toLocaleString('ar-EG')} — عدد الرسايل: ${data.count}`;
+    const list = document.getElementById('list');
+    data.results.forEach((item, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${item.brand} <small>(${item.handle})</small></h3>
+        <div class="status">${item.niche} — ${item.ads_status}</div>
+        <div class="msg" id="msg-${i}">${item.message}</div>
+        <button onclick="copyMsg(${i})">نسخ الرسالة</button>
+      `;
+      list.appendChild(card);
+    });
+  })
+  .catch(() => {
+    document.getElementById('meta').textContent = 'لسه مفيش نتائج — شغّل الـ workflow الأول.';
+  });
+
+function copyMsg(i) {
+  const text = document.getElementById('msg-' + i).textContent;
+  navigator.clipboard.writeText(text);
+}
+</script>
+</body>
+</html>

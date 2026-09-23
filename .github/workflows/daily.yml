@@ -1,0 +1,33 @@
+name: Daily Outreach Generator
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # كل يوم الساعة 6 صباحًا UTC (8 صباحًا بتوقيت مصر)
+  workflow_dispatch:        # تشغيل يدوي من GitHub في أي وقت
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run generator
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+        run: python outreach_generator.py
+
+      - name: Commit results
+        run: |
+          git config user.name "outreach-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add docs/results.json
+          git commit -m "تحديث نتائج $(date +%F)" || echo "لا يوجد تغيير"
+          git push
