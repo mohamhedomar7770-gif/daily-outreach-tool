@@ -150,10 +150,15 @@ def fallback_search_brands(queries):
                     "notes": "مصدر تجريبي عام من عينة GitHub؛ تحقق يدويًا من أن الحساب براند.",
                     "fit_score": "2",
                     "fit_reason": "حساب TikTok عام من dataset تجريبي",
+                    "contact_priority": "منخفضة",
+                    "brand_details": row.get("biography", "")[:300] or "لا توجد نبذة عامة كافية",
+                    "strengths": "حساب عام ويمكن فتح التواصل معه؛ توجد بيانات عامة عن النشاط.",
+                    "weaknesses": "المصدر تجريبي؛ لم يتم التحقق أنه براند أو أنه من مصر/الخليج بشكل مؤكد.",
+                    "verification_status": "مراجعة مطلوبة",
                     "source_urls": dataset_url,
                 }
-                (preferred if any(x in blob for x in ["arabic", "egypt", "saudi", "uae", "kw", "qa", "bh", "om", "ar"]) else other).append(item)
-            for item in preferred + other:
+                (preferred if any(x in blob for x in ["egypt", "مصر", "saudi", "السعود", "uae", "emirat", "الإمار", "kuwait", "الكويت", "qatar", "قطر", "bahrain", "البحرين", "oman", "عمان"]) else other).append(item)
+            for item in preferred:
                 key = norm(item["tiktok_url"])
                 if key in seen:
                     continue
@@ -178,7 +183,7 @@ def discover_brands():
     prompt = f"""أنت باحث عملاء محتملين لخدمات media buying. استخدم Google Search للعثور على براندات حقيقية ونشطة في مصر والخليج ({TARGET_MARKETS}).
 ابحث في Instagram وTikTok العامين، ولا تخترع أي حساب. نفّذ الاستعلامات التالية:
 {chr(10).join('- ' + q for q in queries)}
-أرجع JSON فقط، بدون Markdown، كمصفوفة من أفضل 10 براندات لكل استعلام، وبإجمالي لا يتجاوز {DAILY_LIMIT}. كل عنصر: brand_name, handle_or_page, instagram_url, tiktok_url, website_url, dm_url, niche, market, notes, fit_score, fit_reason. يجب وجود Instagram أو TikTok عام واحد على الأقل، لا تكرر البراند، واكتب فقط معلومات ظاهرة في نتائج البحث."""
+أرجع JSON فقط، بدون Markdown، كمصفوفة من أفضل 10 براندات لكل استعلام، وبإجمالي لا يتجاوز {DAILY_LIMIT}. كل عنصر: brand_name, handle_or_page, instagram_url, tiktok_url, website_url, dm_url, niche, market, notes, fit_score, fit_reason, contact_priority, brand_details, strengths, weaknesses, verification_status. يجب وجود Instagram أو TikTok عام واحد على الأقل، لا تكرر البراند، واكتب فقط معلومات ظاهرة في نتائج البحث."""
     try:
         text, sources = gemini_request(prompt, grounded=True)
         items = parse_json_array(text)
@@ -259,7 +264,7 @@ def main():
             message = draft_message(item["brand_name"], item.get("niche", ""), item.get("notes", ""), ads_status)
         except Exception as exc:
             message = f"تعذر توليد الرسالة: {exc}"
-        results.append({"brand": item["brand_name"], "handle": item.get("handle_or_page", ""), "instagram_url": item.get("instagram_url", ""), "tiktok_url": item.get("tiktok_url", ""), "website_url": item.get("website_url", ""), "dm_url": item.get("dm_url", ""), "niche": item.get("niche", ""), "market": item.get("market", ""), "fit_score": item.get("fit_score", ""), "fit_reason": item.get("fit_reason", ""), "ads_status": ads_status, "message": message, "status": "new", "source_urls": item.get("source_urls", "")})
+        results.append({"brand": item["brand_name"], "handle": item.get("handle_or_page", ""), "instagram_url": item.get("instagram_url", ""), "tiktok_url": item.get("tiktok_url", ""), "website_url": item.get("website_url", ""), "dm_url": item.get("dm_url", ""), "niche": item.get("niche", ""), "market": item.get("market", ""), "fit_score": item.get("fit_score", ""), "fit_reason": item.get("fit_reason", ""), "contact_priority": item.get("contact_priority", ""), "brand_details": item.get("brand_details", item.get("notes", "")), "strengths": item.get("strengths", ""), "weaknesses": item.get("weaknesses", ""), "verification_status": item.get("verification_status", "مراجعة مطلوبة"), "ads_status": ads_status, "message": message, "status": "new", "source_urls": item.get("source_urls", "")})
     output = {"generated_at": now_iso(), "count": len(results), "daily_limit": DAILY_LIMIT, "markets": TARGET_MARKETS.split(","), "results": results, "note": "النتائج اكتُشفت من بحث Google عبر Gemini؛ راجعها قبل التواصل."}
     DOCS.mkdir(exist_ok=True)
     (DOCS / "results.json").write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")

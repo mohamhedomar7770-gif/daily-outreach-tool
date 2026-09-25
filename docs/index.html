@@ -33,7 +33,10 @@ fetch('results.json?_=' + Date.now())
       card.className = 'card';
       card.innerHTML = `
         <h3>${item.brand} <small>(${item.handle})</small></h3><div><a href="${item.instagram_url || item.tiktok_url}" target="_blank">فتح الحساب</a> ${item.website_url ? ` — <a href="${item.website_url}" target="_blank">الموقع</a>` : ""} ${item.dm_url ? ` — <a href="${item.dm_url}" target="_blank">فتح التواصل</a>` : ""}</div>
-        <div class="status">${item.niche} — ${item.ads_status}</div>
+        <div class="status">${item.niche} — ${item.market || ""} — أولوية: ${item.contact_priority || item.fit_score || "مراجعة"} — ${item.ads_status}</div>
+        <div><strong>تفاصيل:</strong> ${item.brand_details || "لا توجد تفاصيل كافية"}</div>
+        <div><strong>المميزات:</strong> ${item.strengths || "تحتاج مراجعة"}</div>
+        <div><strong>العيوب/المخاطر:</strong> ${item.weaknesses || "تحتاج مراجعة"}</div>
         <div class="msg" id="msg-${i}">${item.message}</div>
         <button onclick="copyMsg(${i})">نسخ الرسالة</button>
       `;
