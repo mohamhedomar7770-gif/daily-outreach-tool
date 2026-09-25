@@ -78,28 +78,82 @@ def norm(value):
     return re.sub(r"[^a-z0-9\u0600-\u06ff]", "", (value or "").lower())
 
 
+def fallback_search_brands(queries):
+    """Public search fallback used when Gemini quota is exhausted."""
+    import html
+    results = []
+    seen = set()
+    for query in queries:
+        url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(query)
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(request, timeout=25) as resp:
+                page = resp.read().decode("utf-8", errors="ignore")
+        except Exception as exc:  # noqa: BLE001
+            print(f"تعذر بحث الويب الاحتياطي: {exc}")
+            continue
+        links = re.findall(r'class="result__a"[^>]+href="([^"]+)"', page)
+        if not links:
+            links = re.findall(r'href="(https?://(?:www\.)?(?:instagram\.com|tiktok\.com)/[^"?&]+)', page)
+        for raw in links:
+            link = html.unescape(raw)
+            if "uddg=" in link:
+                link = urllib.parse.parse_qs(urllib.parse.urlparse(link).query).get("uddg", [link])[0]
+            parsed = urllib.parse.urlparse(link)
+            host = parsed.netloc.lower().replace("www.", "")
+            if host not in ("instagram.com", "tiktok.com"):
+                continue
+            parts = [x for x in parsed.path.split("/") if x]
+            if not parts or parts[0].lower() in ("p", "reel", "video", "explore", "tag", "@"):
+                continue
+            handle = "@" + parts[0].lstrip("@")
+            key = norm(host + handle)
+            if key in seen:
+                continue
+            seen.add(key)
+            results.append({
+                "brand_name": parts[0].lstrip("@ ").replace("_", " ").replace("-", " ").title(),
+                "handle_or_page": handle,
+                "instagram_url": link if host == "instagram.com" else "",
+                "tiktok_url": link if host == "tiktok.com" else "",
+                "website_url": "",
+                "niche": "تجارة إلكترونية",
+                "market": "مصر والخليج",
+                "notes": "تم العثور على الحساب عبر بحث ويب عام؛ راجع الحساب قبل التواصل.",
+                "fit_score": "3",
+                "fit_reason": "حساب عام على Instagram أو TikTok",
+                "source_urls": link,
+            })
+            if len(results) >= DAILY_LIMIT:
+                return results
+    return results
+
+
 def discover_brands():
     queries = [r.get("query", "").strip() for r in load_rows(DATA / "search_queries.csv") if r.get("query")]
     if not queries:
         queries = [
-            "Instagram TikTok e-commerce brands Egypt skincare fashion food accessories",
-            "Instagram TikTok brands Saudi Arabia UAE Kuwait Qatar Bahrain Oman e-commerce",
+            "site:instagram.com Egypt brand skincare fashion food accessories",
+            "site:tiktok.com Egypt brand skincare fashion food accessories",
+            "site:instagram.com Saudi UAE Kuwait Qatar Bahrain Oman brand ecommerce",
+            "site:tiktok.com Saudi UAE Kuwait Qatar Bahrain Oman brand ecommerce",
         ]
     prompt = f"""أنت باحث عملاء محتملين لخدمات media buying. استخدم Google Search للعثور على براندات حقيقية ونشطة في مصر والخليج ({TARGET_MARKETS}).
 ابحث في Instagram وTikTok العامين، ولا تخترع أي حساب. نفّذ الاستعلامات التالية:
 {chr(10).join('- ' + q for q in queries)}
-
-أرجع JSON فقط، بدون Markdown، كمصفوفة من أفضل 10 براندات لكل استعلام، وبإجمالي لا يتجاوز {DAILY_LIMIT} براندًا. كل عنصر يجب أن يحتوي:
-brand_name, handle_or_page, instagram_url, tiktok_url, website_url, dm_url, niche, market, notes, fit_score, fit_reason.
-يجب أن يحتوي كل عنصر على رابط Instagram أو TikTok عام واحد على الأقل، وأن يكون مناسبًا للتجارة الإلكترونية أو لديه منتج يمكن الإعلان عنه، وأن يحتوي على instagram_url أو tiktok_url صالح. لا تكرر نفس البراند. اذكر فقط معلومات ظاهرة في نتائج البحث، واكتب fit_score من 1 إلى 5."""
-    text, sources = gemini_request(prompt, grounded=True)
-    items = parse_json_array(text)
-    for item in items:
-        existing = item.get("source_urls", [])
-        if isinstance(existing, str):
-            existing = [x.strip() for x in existing.split("|") if x.strip()]
-        item["source_urls"] = " | ".join(list(dict.fromkeys(existing + sources))[:8])
-    return items[:DAILY_LIMIT]
+أرجع JSON فقط، بدون Markdown، كمصفوفة من أفضل 10 براندات لكل استعلام، وبإجمالي لا يتجاوز {DAILY_LIMIT}. كل عنصر: brand_name, handle_or_page, instagram_url, tiktok_url, website_url, dm_url, niche, market, notes, fit_score, fit_reason. يجب وجود Instagram أو TikTok عام واحد على الأقل، لا تكرر البراند، واكتب فقط معلومات ظاهرة في نتائج البحث."""
+    try:
+        text, sources = gemini_request(prompt, grounded=True)
+        items = parse_json_array(text)
+        for item in items:
+            existing = item.get("source_urls", [])
+            if isinstance(existing, str):
+                existing = [existing]
+            item["source_urls"] = " | ".join(list(dict.fromkeys(existing + sources))[:8])
+        return items[:DAILY_LIMIT]
+    except Exception as exc:  # noqa: BLE001
+        print(f"تعذر Gemini discovery، سيتم استخدام بحث الويب الاحتياطي: {exc}")
+        return fallback_search_brands(queries)
 
 
 def check_meta_ads(brand_name):
@@ -121,8 +175,12 @@ def draft_message(brand_name, niche, notes, ads_status):
 المجال: {niche}. الملاحظات: {notes}. حالة الإعلانات: {ads_status}.
 أنا media buyer وخدمتي: {MY_SERVICE_DESCRIPTION}.
 اذكر ملاحظة حقيقية من البيانات، لا تدّعي أنك تواصلت معهم من قبل، لا تبالغ ولا تضغط، واختم بسؤال بسيط يفتح حوار. أرجع النص فقط."""
-    text, _ = gemini_request(prompt)
-    return text
+    try:
+        text, _ = gemini_request(prompt)
+        return text
+    except Exception as exc:  # noqa: BLE001
+        print(f"تعذر توليد AI لـ {brand_name}، سيتم استخدام قالب: {exc}")
+        return f"أهلًا، لفت نظري شغلكم في {niche} على السوشيال ميديا. أنا media buyer وبساعد البراندات تزود المبيعات من خلال حملات إعلانية محسوبة. حابب أسألكم: هل بتشغلوا إعلانات حاليًا أو مهتمين بتحسين نتائجها؟"
 
 
 def main():
@@ -137,7 +195,7 @@ def main():
         discovered = discover_brands()
     except Exception as exc:
         print(f"تعذر اكتشاف البراندات: {exc}")
-        raise
+        discovered = []
     new_items = []
     for item in discovered:
         name, handle = str(item.get("brand_name", "")).strip(), str(item.get("handle_or_page", "")).strip()
