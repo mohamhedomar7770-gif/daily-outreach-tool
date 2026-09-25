@@ -1,6 +1,7 @@
 """Daily brand discovery and outreach generator."""
 import csv
 import datetime as dt
+import io
 import json
 import os
 import re
@@ -125,6 +126,43 @@ def fallback_search_brands(queries):
             })
             if len(results) >= DAILY_LIMIT:
                 return results
+    if len(results) < DAILY_LIMIT:
+        dataset_url = "https://raw.githubusercontent.com/luminati-io/TikTok-dataset-samples/main/tiktok-profiles.csv"
+        try:
+            with urllib.request.urlopen(dataset_url, timeout=30) as resp:
+                rows = list(csv.DictReader(io.StringIO(resp.read().decode("utf-8", errors="ignore"))))
+            preferred = []
+            other = []
+            for row in rows:
+                profile = row.get("url", "").strip()
+                nickname = row.get("nickname", "").strip()
+                if not profile or not nickname:
+                    continue
+                blob = " ".join([row.get("region", ""), row.get("predicted_lang", ""), row.get("biography", ""), row.get("signature", "")]).lower()
+                item = {
+                    "brand_name": nickname.replace("_", " ").title(),
+                    "handle_or_page": "@" + nickname.lstrip("@"),
+                    "instagram_url": "",
+                    "tiktok_url": profile,
+                    "website_url": row.get("bio_link", "").strip(),
+                    "niche": "تجارة إلكترونية / محتوى",
+                    "market": row.get("region", "") or "غير محدد",
+                    "notes": "مصدر تجريبي عام من عينة GitHub؛ تحقق يدويًا من أن الحساب براند.",
+                    "fit_score": "2",
+                    "fit_reason": "حساب TikTok عام من dataset تجريبي",
+                    "source_urls": dataset_url,
+                }
+                (preferred if any(x in blob for x in ["arabic", "egypt", "saudi", "uae", "kw", "qa", "bh", "om", "ar"]) else other).append(item)
+            for item in preferred + other:
+                key = norm(item["tiktok_url"])
+                if key in seen:
+                    continue
+                seen.add(key)
+                results.append(item)
+                if len(results) >= DAILY_LIMIT:
+                    break
+        except Exception as exc:  # noqa: BLE001
+            print(f"تعذر مصدر GitHub التجريبي: {exc}")
     return results
 
 
