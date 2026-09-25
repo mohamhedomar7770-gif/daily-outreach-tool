@@ -84,7 +84,7 @@ def fallback_search_brands(queries):
     results = []
     seen = set()
     for query in queries:
-        url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(query)
+        url = "https://www.google.com/search?q=" + urllib.parse.quote(query)
         try:
             request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(request, timeout=25) as resp:
@@ -92,9 +92,8 @@ def fallback_search_brands(queries):
         except Exception as exc:  # noqa: BLE001
             print(f"تعذر بحث الويب الاحتياطي: {exc}")
             continue
-        links = re.findall(r'class="result__a"[^>]+href="([^"]+)"', page)
-        if not links:
-            links = re.findall(r'href="(https?://(?:www\.)?(?:instagram\.com|tiktok\.com)/[^"?&]+)', page)
+        links = re.findall(r'https?://(?:www\.)?(?:instagram\.com|tiktok\.com)/[A-Za-z0-9._~/%@-]+', page)
+        links = list(dict.fromkeys(links))
         for raw in links:
             link = html.unescape(raw)
             if "uddg=" in link:
