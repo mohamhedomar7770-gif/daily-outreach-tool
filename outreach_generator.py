@@ -6,6 +6,7 @@ import os
 import re
 import urllib.parse
 import urllib.request
+import urllib.error
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -34,8 +35,12 @@ def gemini_request(prompt, grounded=False):
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY},
     )
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        data = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Gemini HTTP {exc.code}: {detail[:1000]}") from exc
     try:
         text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except (KeyError, IndexError) as exc:
