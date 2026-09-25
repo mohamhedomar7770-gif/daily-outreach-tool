@@ -132,7 +132,7 @@ def main():
         discovered = discover_brands()
     except Exception as exc:
         print(f"تعذر اكتشاف البراندات: {exc}")
-        discovered = []
+        raise
     new_items = []
     for item in discovered:
         name, handle = str(item.get("brand_name", "")).strip(), str(item.get("handle_or_page", "")).strip()
