@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-25T09:14:05+00:00",
-  "count": 1,
+  "generated_at": "2026-09-25T11:26:58+00:00",
+  "count": 0,
   "daily_limit": 60,
   "markets": [
     "مصر",
@@ -11,28 +11,6 @@
     "البحرين",
     "عمان"
   ],
-  "results": [
-    {
-      "brand": "Naar Abaya",
-      "handle": "@Naar Abaya",
-      "instagram_url": "",
-      "tiktok_url": "https://www.tiktok.com/@eram_mohammad",
-      "website_url": "https://naarabaya.com/",
-      "dm_url": "https://www.tiktok.com/@eram_mohammad",
-      "niche": "تجارة إلكترونية / محتوى",
-      "market": "AE",
-      "fit_score": "2",
-      "fit_reason": "حساب TikTok عام من dataset تجريبي",
-      "contact_priority": "منخفضة",
-      "brand_details": "Uae 🇦🇪 best abayas",
-      "strengths": "حساب عام ويمكن فتح التواصل معه؛ توجد بيانات عامة عن النشاط.",
-      "weaknesses": "المصدر تجريبي؛ لم يتم التحقق أنه براند أو أنه من مصر/الخليج بشكل مؤكد.",
-      "verification_status": "مراجعة مطلوبة",
-      "ads_status": "لم يتم الفحص (META_ACCESS_TOKEN اختياري)",
-      "message": "ازيك يا Naar Abaya، لاحظت شغلكم المميز في العبايات وأنا Media Buyer متخصص في E-commerce ومصر والخليج. مش دافعين إعلانات قبل كده، بس حابب أعرف شغالين أوبتيمايزز إزاي للكونバージョン في السيلز؟ لو مهتمين نزود المبيعات، حابب ندردش في سكة تظبط الأرقام؟",
-      "status": "new",
-      "source_urls": "https://raw.githubusercontent.com/luminati-io/TikTok-dataset-samples/main/tiktok-profiles.csv"
-    }
-  ],
+  "results": [],
   "note": "النتائج اكتُشفت من بحث Google عبر Gemini؛ راجعها قبل التواصل."
 }
